@@ -1,0 +1,201 @@
+#!/bin/bash
+# Frame Checker - Build Automation Script for MacOS packaging
+# Copyright (C) 2025 Vuk Knežević
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+get_python_binary() {
+    python_binary=""
+    system_version=$(python3 --version 2>&1 | grep -E '^Python 3\.(1[0-9]|[0-9][0-9])' | awk '{print $2}')
+    if [[ -n "$system_version" ]]; then
+        # Check if the string contains exactly two dots
+        if [[ $(echo "$system_version" | grep -o '\.' | wc -l) -eq 2 ]]; then
+            # Strip everything from the last dot to the end of the string
+            stripped="${system_version%.*}"
+            python_binary=$(which "python$stripped")
+        else
+            python_binary=$(which "python$system_version")
+        fi
+    fi
+    # If no valid Python binary is found, return an empty string
+    if [[ -z "$python_binary" ]]; then
+        echo ""
+        return 1
+    else
+        echo "$python_binary"
+        return 0
+    fi
+}
+
+# Define paths
+BUILD="build"
+DIST="dist"
+PKG_ROOT="$BUILD/package"
+PKG_TEMP="$PKG_ROOT/tmp"
+SCRIPTS_DIR="$BUILD/scripts"
+DISTRIBUTION="$BUILD/distribution.xml"
+APP_SOURCE="$DIST/Frame Checker.app"
+APP_DEST="$PKG_TEMP/Frame Checker.app"
+SCRIPT_SOURCE="macos/install_ffmpeg.sh"
+SCRIPT_DEST="$PKG_ROOT/tmp/install_ffmpeg.sh"
+POSTINSTALL="macos/postinstall"
+ASSETS="assets"
+RESOURCES="resources"
+LICENSE_FILE="$RESOURCES/LICENSE.txt"
+IDENTIFIER="com.kuvk.FrameChecker"
+VERSION="1.0"
+INSTALL_PKG="framechecker.pkg"
+if [ "$1" == "universal2" ]; then
+    FINAL_PKG="frame-checker-1.0-1-universal2.pkg"
+else
+    if sysctl -n machdep.cpu.brand_string | grep -q "Apple"; then
+        FINAL_PKG="frame-checker-1.0-1-arm64.pkg"
+    else
+        FINAL_PKG="frame-checker-1.0-1-x86_64.pkg"
+    fi
+fi
+FINAL_PKG_SHA="$FINAL_PKG.sha256"
+VENV="venv"
+PYTHON=$(get_python_binary)
+PYTHON=$(echo "$PYTHON" | tail -n 1)
+
+# Check if the Python path is found
+if [[ -n "$PYTHON" ]]; then
+    echo "Using $($PYTHON --version)"
+else
+    echo "Error: No valid Python version 3.10 or higher found. Exiting."
+    exit 1
+fi
+
+# Clear previous build and package
+rm -rf "$DIST" "$BUILD" "$FINAL_PKG" "$FINAL_PKG_SHA"
+
+# Check if the virtual environment exists
+if [[ ! -d "$VENV" ]]; then
+    echo "Virtual environment not found, creating..."
+    "$PYTHON" -m venv "$VENV"
+else
+    echo "Virtual environment already exists at $VENV"
+fi
+
+# Check if the virtual environment is already activated
+if [[ -z "$VIRTUAL_ENV" ]]; then
+    if [[ -f "$VENV/bin/activate" ]]; then
+        source "$VENV/bin/activate"
+        echo "Virtual environment activated: $VIRTUAL_ENV"
+    else
+        echo "Error: $VENV/bin/activate does not exist. Please check the environment."
+        exit 1
+    fi
+else
+    echo "Virtual environment already active: $VIRTUAL_ENV"
+fi
+
+# Install requirements and build app with pyinstaller
+echo "Upgrading pip..."
+pip install --upgrade pip
+echo "Installing Frame Checker reqirements with pip..."
+pip install -r frame_checker/requirements.txt
+pip install pyinstaller
+echo "Building Frame Checker.app with pyinstaller ..."
+if [ "$1" == "universal2" ]; then
+    pyinstaller -n "Frame Checker" --noconsole \
+        --target-arch universal2 \
+        --icon "$RESOURCES/icon.icns" \
+        --add-data "$RESOURCES/icon.icns:$RESOURCES" \
+        --add-data "$ASSETS:$ASSETS" \
+        --add-data "LICENSE:." \
+        --add-data "COPYING:." \
+        --add-data "frame_checker/default_settings.ini:." \
+        "frame_checker/main.py"
+else
+    pyinstaller -n "Frame Checker" --noconsole \
+        --icon "$RESOURCES/icon.icns" \
+        --add-data "$RESOURCES/icon.icns:$RESOURCES" \
+        --add-data "$ASSETS:$ASSETS" \
+        --add-data "LICENSE:." \
+        --add-data "COPYING:." \
+        --add-data "frame_checker/default_settings.ini:." \
+        "frame_checker/main.py"
+fi
+rm "Frame Checker.spec"
+
+# Exit if pyinstaller command failed
+if [[ ! -d "$APP_SOURCE" ]]; then
+    echo "Error: $APP_SOURCE not found."
+    exit 1
+fi
+
+# Create necessary dirs, copy app from dist and codesing it
+echo "Creating $PKG_TEMP..."
+mkdir -p "$PKG_TEMP"
+
+echo "Copying $APP_SOURCE to $APP_DEST..."
+cp -r "$APP_SOURCE" "$APP_DEST"
+
+echo "Signing $APP_DEST..."
+codesign --deep --force --verbose --sign "$IDENTIFIER" "$APP_DEST"
+
+# Copy install_ffmpeg.sh
+echo "Copying $SCRIPT_SOURCE to $SCRIPT_DEST..."
+cp "$SCRIPT_SOURCE" "$SCRIPT_DEST"
+
+# Create scripts dir and add postinstall
+echo "Creating $SCRIPTS_DIR..."
+mkdir -p "$SCRIPTS_DIR"
+
+echo "Copying $POSTINSTALL to $SCRIPTS_DIR..."
+cp "$POSTINSTALL" "$SCRIPTS_DIR"
+
+# Build package and codesign
+pkgbuild --root "$PKG_ROOT" \
+    --install-location "/" \
+    --scripts "$SCRIPTS_DIR" \
+    --identifier "$IDENTIFIER" \
+    --version "$VERSION" \
+    --ownership recommended \
+    "$INSTALL_PKG"
+echo "Signing $INSTALL_PKG..."
+codesign --deep --force --verbose --sign "$IDENTIFIER" "$INSTALL_PKG"
+
+# Add license.txt and distribution.xml to build
+echo "Copying $LICENSE_FILE to $BUILD..."
+cp "$LICENSE_FILE" "$BUILD"
+echo "Copying $RESOURCES/distribution.xml to $BUILD..."
+cp "$RESOURCES/distribution.xml" "$DISTRIBUTION"
+
+# Build product with license and codesign
+productbuild --distribution "$DISTRIBUTION" \
+    --package-path "$INSTALL_PKG" \
+    --resources "$BUILD" \
+    "$FINAL_PKG"
+echo "Built $FINAL_PKG..."
+echo "Signing $FINAL_PKG..."
+codesign --deep --force --verbose --sign "$IDENTIFIER" "$FINAL_PKG"
+
+# Remove package, generate sha256sum for product and offer to run installer
+echo "Removing $INSTALL_PKG..."
+rm -rf "$INSTALL_PKG"
+
+echo "Generating sha256sum..."
+sha256sum "$FINAL_PKG" >"$FINAL_PKG_SHA"
+sha256sum -c "$FINAL_PKG_SHA"
+
+read -r -p "Would you like to run $FINAL_PKG now? (y/n): " choice
+
+if [[ "$choice" == "y" || "$choice" == "Y" ]]; then
+    open $FINAL_PKG
+fi
+echo "DONE"
+exit 0

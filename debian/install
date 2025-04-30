@@ -1,0 +1,14 @@
+assets/* usr/share/frame-checker/assets/
+resources/frame-checker.desktop usr/share/applications/
+resources/frame-checker.desktop usr/share/frame-checker/resources/
+resources/icon.png usr/share/frame-checker/resources/
+resources/icons/512x512/frame-checker.png usr/share/icons/hicolor/512x512/apps/
+resources/icons/256x256/frame-checker.png usr/share/icons/hicolor/256x256/apps/
+resources/icons/128x128/frame-checker.png usr/share/icons/hicolor/128x128/apps/
+resources/icons/64x64/frame-checker.png usr/share/icons/hicolor/64x64/apps/
+resources/icons/48x48/frame-checker.png usr/share/icons/hicolor/48x48/apps/
+resources/icons/32x32/frame-checker.png usr/share/icons/hicolor/32x32/apps/
+resources/icons/16x16/frame-checker.png usr/share/icons/hicolor/16x16/apps/
+README.md usr/share/doc/frame-checker/
+LICENSE usr/share/doc/frame-checker/
+COPYING usr/share/doc/frame-checker/

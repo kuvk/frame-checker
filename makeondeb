@@ -1,0 +1,69 @@
+#!/bin/bash
+# Frame Checker - Build Automation Script for Debian packaging
+# Copyright (C) 2025 Vuk Knežević
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+if [ ! -d "debian" ]; then
+    echo "Error: missing debian directory."
+    exit 1
+fi
+
+ICONS="resources/icons"
+APP_NAME="frame-checker"
+
+if command -v convert &>/dev/null; then
+    MAGICK="convert"
+elif command -v magick &>/dev/null; then
+    MAGICK="magick"
+else
+    echo "Install imagemagick first. Exiting."
+    exit 1
+fi
+
+echo "Generating icons in $ICONS..."
+mkdir -p "$ICONS"
+for size in 512 256 128 64 48 32 16; do
+    mkdir -p "$ICONS/${size}x${size}"
+    convert "resources/icon.png" -resize ${size}x${size} "$ICONS/${size}x${size}/$APP_NAME.png"
+done
+
+if command -v dh &>/dev/null; then
+    if [ -f "debian/rules" ]; then
+        debian/rules clean
+    else
+        echo "Error: debian/rules not found."
+        exit 1
+    fi
+else
+    echo "Error: dh command not found."
+    exit 1
+fi
+
+if command -v dpkg-buildpackage &>/dev/null; then
+    dpkg-buildpackage -us -uc
+else
+    echo "Error: dpkg-buildpackage command not found."
+    exit 1
+fi
+
+if command -V sha256sum &>/dev/null; then
+    echo "Generating sha256sum..."
+    cd ../
+    sha256sum frame-checker_1.0-1_all.deb >frame-checker_1.0-1_all.deb.sha256
+    sha256sum -c frame-checker_1.0-1_all.deb.sha256
+fi
+
+echo "DONE"
+exit 0

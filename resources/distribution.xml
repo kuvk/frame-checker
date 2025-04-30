@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<installer-gui-script minSpecVersion="1">
+    <title>Frame Checker</title>
+    <license file="LICENSE.txt"/>
+    <pkg-ref id="com.kuvk.FrameChecker"/>
+    
+    <choices-outline>
+        <line choice="default"/>
+    </choices-outline>
+
+    <choice id="default" title="Frame Checker">
+        <pkg-ref id="com.kuvk.FrameChecker"/>
+    </choice>
+
+    <pkg-ref id="com.kuvk.FrameChecker" installKBytes="50000" version="1.0.0">
+        framechecker.pkg
+    </pkg-ref>
+</installer-gui-script>
+
+

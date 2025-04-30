@@ -1,0 +1,16 @@
+QLabel, 
+QLineEdit, 
+QPushButton, 
+QGroupBox, 
+QCheckBox {
+    font-family: "Custom Font";
+    font-size: 13px;
+}
+
+QTextEdit,
+QSpinBox, 
+QDoubleSpinBox { 
+    font-family: "Custom Mono Font";
+    font-size: 12px;
+    font-weight: 500;
+}

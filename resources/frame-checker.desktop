@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Frame Checker
+Comment=Frame Checker is a PySide6 application for checking video frames using ffmpeg filters.
+Exec=frame-checker
+Icon=frame-checker
+Terminal=false
+Type=Application
+Categories=Video;Utility;
+StartupWMClass=frame-checker

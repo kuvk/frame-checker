@@ -1,0 +1,27 @@
+#!/bin/sh
+set -e
+
+case "$1" in
+    configure)
+        # Find the site-packages directory
+        SITE_PACKAGES_DIR=$(find /opt/frame-checker/lib -type d -name "site-packages" | head -n 1)
+
+        if [ -z "$SITE_PACKAGES_DIR" ]; then
+            echo "Error: site-packages directory not found"
+            exit 1
+        fi
+
+        cat <<EOF > /usr/bin/frame-checker
+#!/bin/sh
+export QT_QPA_PLATFORM=xcb
+export APP_ID=frame-checker
+export PYTHONPATH=$SITE_PACKAGES_DIR
+exec /opt/frame-checker/bin/frame-checker "\$@"
+EOF
+
+        # Make the wrapper script executable
+        chmod +x /usr/bin/frame-checker
+        ;;
+esac
+
+exit 0

@@ -1,0 +1,11 @@
+#!/bin/sh
+set -e
+
+case "$1" in
+remove | purge)
+    # Remove the wrapper script
+    rm -f /usr/bin/frame-checker
+    ;;
+esac
+
+exit 0

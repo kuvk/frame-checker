@@ -1,0 +1,16 @@
+Source: frame-checker
+Section: utils
+Priority: optional
+Maintainer: Vuk Knezevic <kuvk.me@gmail.com>
+Build-Depends: debhelper-compat (= 13), dh-virtualenv, python3-all
+Standards-Version: 4.5.0
+Homepage: https://github.com/kuvk/frame-checker
+Rules-Requires-Root: no
+
+Package: frame-checker
+Architecture: all
+Depends: ${misc:Depends}, python3 (>= 3.10), ffmpeg, libxcb-cursor0, xdg-utils
+Description: Frame Checker
+ Frame Checker is a PySide6 application for checking video frames using ffmpeg filters.
+ It helps detect black and frozen frames, as well as silence in video files using a 
+ user-friendly interface.
